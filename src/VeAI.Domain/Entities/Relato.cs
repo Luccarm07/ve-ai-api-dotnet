@@ -107,12 +107,16 @@ public class Relato
         return anterior;
     }
 
-    /// <summary>O autor só pode excluir relato sem apoios: com apoios, outras pessoas dependem dele (409).</summary>
+    /// <summary>
+    /// Exclusão pelo autor: só enquanto ABERTO (422) e sem apoios (409), porque apagar o relato
+    /// apagaria a confirmação de outras pessoas.
+    /// </summary>
     public void GarantirQuePodeExcluir()
     {
+        if (Status != StatusRelato.ABERTO)
+            throw RegraNegocioException.Regra("Só é possível excluir um relato que ainda está aberto.");
         if (TotalApoios > 0)
-            throw RegraNegocioException.Conflito(
-                "Este relato já foi confirmado por outras pessoas e não pode ser excluído.");
+            throw RegraNegocioException.Conflito("Outras pessoas já confirmaram este relato. Ele não pode ser excluído.");
     }
 
     public void RecalcularPrioridade(DateTime agora) =>

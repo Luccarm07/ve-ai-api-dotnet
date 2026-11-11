@@ -55,6 +55,15 @@ public class RelatoTests
         Assert.Equal(TipoErro.Conflito, Assert.Throws<RegraNegocioException>(relato.GarantirQuePodeExcluir).Tipo);
     }
 
+    [Fact(DisplayName = "excluir relato que já saiu de ABERTO gera erro de regra (422)")]
+    public void ExcluirForaDeAberto()
+    {
+        var relato = StatusRelatoTests.NovoRelato();
+        relato.AlterarStatus(StatusRelato.EM_TRIAGEM, null, null, Agora);
+
+        Assert.Equal(TipoErro.RegraViolada, Assert.Throws<RegraNegocioException>(relato.GarantirQuePodeExcluir).Tipo);
+    }
+
     [Fact(DisplayName = "relato novo nasce ABERTO, sem apoios, com textos aparados")]
     public void NovoRelato()
     {

@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Collections.Concurrent;
+using VeAI.Application.Abstracoes;
 using VeAI.Domain.Entities;
+using VeAI.Domain.Eventos;
 using VeAI.Infrastructure.Persistence;
 
 namespace VeAI.Tests.Integration;
@@ -22,6 +25,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     public const string SegredoJwt = "segredo-so-dos-testes-automatizados-com-mais-de-32-caracteres";
 
     private readonly SqliteConnection _conexao = new("DataSource=:memory:");
+
+    /// <summary>Eventos publicados (no lugar do RabbitMQ), para os testes conferirem o que foi avisado.</summary>
+    public EventosCapturados Eventos { get; } = new();
 
     /// <summary>Cliente já autenticado com o usuário informado (senha do seed: Veai@2026).</summary>
     public async Task<HttpClient> ClienteLogadoAsync(string email)
@@ -44,12 +50,15 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Oracle", "nao-usado-nos-testes");
         builder.UseSetting("Jwt:Segredo", SegredoJwt);
+        builder.UseSetting("Manutencao:Ativa", "false");
 
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<VeAiDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<VeAiDbContext>>();
             services.AddDbContext<VeAiDbContext>(o => o.UseSqlite(_conexao));
+            services.RemoveAll<IPublicadorEventos>();
+            services.AddSingleton<IPublicadorEventos>(Eventos);
 
             using var escopo = services.BuildServiceProvider().CreateScope();
             var db = escopo.ServiceProvider.GetRequiredService<VeAiDbContext>();
@@ -95,5 +104,19 @@ public static class DadosTeste
             Usuario.NovoGestor("Marina Alves", EmailMarina, SenhaHash, [pinheiros, se], agora.AddDays(-100)),
             Usuario.NovoGestor("Rafael Costa", EmailRafael, SenhaHash, [vilaMariana], agora.AddDays(-100)));
         db.SaveChanges();
+    }
+}
+
+/// <summary>Publicador de eventos dos testes: guarda em memória o que seria enviado ao RabbitMQ.</summary>
+public sealed class EventosCapturados : IPublicadorEventos
+{
+    private readonly ConcurrentQueue<EventoRelato> _eventos = new();
+
+    public IReadOnlyList<EventoRelato> Todos => _eventos.ToList();
+
+    public Task PublicarAsync(EventoRelato evento, CancellationToken ct = default)
+    {
+        _eventos.Enqueue(evento);
+        return Task.CompletedTask;
     }
 }

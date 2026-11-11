@@ -33,6 +33,13 @@ public static class EndpointExtensions
     public static RouteHandlerBuilder ComValidacao<T>(this RouteHandlerBuilder builder) where T : class =>
         builder.AddEndpointFilter<ValidacaoFiltro<T>>().ProducesErro(StatusCodes.Status400BadRequest);
 
+    /// <summary>Documenta um erro comum a todas as rotas de um grupo (ex.: 403 por perfil).</summary>
+    public static RouteGroupBuilder ProducesErroGrupo(this RouteGroupBuilder grupo, int status)
+    {
+        grupo.WithMetadata(new Microsoft.AspNetCore.Mvc.ProducesResponseTypeAttribute(typeof(ErroResposta), status, "application/json"));
+        return grupo;
+    }
+
     /// <summary>Documenta no Swagger uma resposta de erro no formato ErroResposta.</summary>
     public static RouteHandlerBuilder ProducesErro(this RouteHandlerBuilder builder, params int[] status)
     {

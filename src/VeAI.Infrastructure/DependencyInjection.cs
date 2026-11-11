@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oracle.EntityFrameworkCore.Infrastructure;
 using VeAI.Application.Abstracoes;
+using VeAI.Infrastructure.Manutencao;
+using VeAI.Infrastructure.Mensageria;
 using VeAI.Infrastructure.Persistence;
 using VeAI.Infrastructure.Persistence.Repositorios;
 using VeAI.Infrastructure.Seguranca;
@@ -30,7 +32,17 @@ public static class DependencyInjection
 
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
         services.AddScoped<IRegiaoRepositorio, RegiaoRepositorio>();
+        services.AddScoped<IRelatoRepositorio, RelatoRepositorio>();
+        services.AddScoped<IApoioRepositorio, ApoioRepositorio>();
+        services.AddScoped<IAtualizacaoRepositorio, AtualizacaoRepositorio>();
+        services.AddScoped<IDescricaoRepositorio, DescricaoRepositorio>();
+        services.AddScoped<IIdempotenciaRepositorio, IdempotenciaRepositorio>();
         services.AddScoped<IUnidadeDeTrabalho, UnidadeDeTrabalho>();
+        services.AddSingleton<IPublicadorEventos, PublicadorEventosLog>();
+
+        // Recalcular prioridade e limpar idempotência vencida (desligável: Manutencao__Ativa=false).
+        if (configuration.GetValue("Manutencao:Ativa", true))
+            services.AddHostedService<ManutencaoPeriodica>();
         services.AddSingleton<ISenhaHasher, SenhaHasherBCrypt>();
         services.AddSingleton<IGeradorToken, GeradorTokenJwt>();
 

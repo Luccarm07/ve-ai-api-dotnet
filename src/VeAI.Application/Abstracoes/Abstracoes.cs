@@ -1,4 +1,6 @@
 using VeAI.Domain.Entities;
+using VeAI.Domain.Enums;
+using VeAI.Domain.Eventos;
 
 namespace VeAI.Application.Abstracoes;
 
@@ -16,12 +18,83 @@ public interface IUsuarioRepositorio
 public interface IRegiaoRepositorio
 {
     Task<IReadOnlyList<Regiao>> ListarAsync(CancellationToken ct = default);
+    Task<Regiao?> BuscarAsync(long id, CancellationToken ct = default);
 }
 
-/// <summary>Grava de uma vez as alterações feitas nos repositórios (SaveChanges).</summary>
+/// <summary>Página de resultados vinda do banco (itens da página + total geral).</summary>
+public sealed record Pagina<T>(IReadOnlyList<T> Itens, long Total);
+
+public interface IRelatoRepositorio
+{
+    /// <summary>Relato com a região carregada (leitura).</summary>
+    Task<Relato?> BuscarAsync(long id, CancellationToken ct = default);
+
+    /// <summary>Relato com a região carregada e a linha bloqueada até o fim da transação (Oracle: FOR UPDATE).</summary>
+    Task<Relato?> BuscarParaAtualizarAsync(long id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Pré-filtro da regra dos 30 m: mesmo tipo, não finalizados, dentro de uma "caixa" de lat/long.
+    /// As linhas ficam bloqueadas até o fim da transação, para dois apoios simultâneos não se perderem.
+    /// </summary>
+    Task<IReadOnlyList<Relato>> CandidatosProximosAsync(TipoRelato tipo, double latMin, double latMax,
+                                                        double lonMin, double lonMax, CancellationToken ct = default);
+
+    Task<Pagina<Relato>> DoCidadaoAsync(long cidadaoId, int pagina, int tamanho, CancellationToken ct = default);
+
+    /// <summary>Fila do gestor: maior prioridade primeiro, depois o mais antigo.</summary>
+    Task<Pagina<Relato>> FilaAsync(IReadOnlyCollection<long> regioes, StatusRelato? status, int pagina, int tamanho,
+                                   CancellationToken ct = default);
+
+    Task<IReadOnlyList<Relato>> NaoFinalizadosAsync(CancellationToken ct = default);
+    void Adicionar(Relato relato);
+    void Remover(Relato relato);
+}
+
+public interface IApoioRepositorio
+{
+    Task<bool> ExisteAsync(long relatoId, long usuarioId, CancellationToken ct = default);
+    void Adicionar(ApoioRelato apoio);
+}
+
+public interface IAtualizacaoRepositorio
+{
+    Task<IReadOnlyList<AtualizacaoRelato>> HistoricoAsync(long relatoId, CancellationToken ct = default);
+    void Adicionar(AtualizacaoRelato atualizacao);
+}
+
+public interface IDescricaoRepositorio
+{
+    Task<Descricao?> BuscarDoUsuarioAsync(long id, long usuarioId, CancellationToken ct = default);
+}
+
+public interface IIdempotenciaRepositorio
+{
+    Task<RegistroIdempotencia?> BuscarAsync(long usuarioId, string chave, CancellationToken ct = default);
+    void Adicionar(RegistroIdempotencia registro);
+    void Remover(RegistroIdempotencia registro);
+    Task<int> ApagarAnterioresAAsync(DateTime limite, CancellationToken ct = default);
+}
+
+/// <summary>Publica eventos de relato (RabbitMQ). Chamado só depois do commit.</summary>
+public interface IPublicadorEventos
+{
+    Task PublicarAsync(EventoRelato evento, CancellationToken ct = default);
+}
+
+/// <summary>Controla gravação e transação (SaveChanges / BeginTransaction do EF Core).</summary>
 public interface IUnidadeDeTrabalho
 {
+    /// <summary>Grava as alterações pendentes.</summary>
     Task SalvarAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Executa a ação numa transação: grava e confirma no fim, ou desfaz tudo se algo falhar.
+    /// Se já existe uma transação aberta, a ação participa dela.
+    /// </summary>
+    Task<T> EmTransacaoAsync<T>(Func<Task<T>> acao, CancellationToken ct = default);
+
+    /// <summary>Agenda uma ação para depois do commit (ex.: publicar evento). Se houver rollback, é descartada.</summary>
+    void AposConfirmar(Func<Task> acao);
 }
 
 public interface ISenhaHasher

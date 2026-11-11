@@ -74,6 +74,8 @@ app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription().All
 app.MapAuth();
 app.MapUsuarios();
 app.MapRegioes();
+app.MapRelatos();
+app.MapGestor();
 
 // /health: API + banco + serviços externos · /health/live: só o processo · /health/ready: dependências.
 app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = RespostaSaude.Escrever }).AllowAnonymous();

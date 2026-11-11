@@ -10,6 +10,10 @@ public static class DependencyInjection
         services.AddScoped<AuthServico>();
         services.AddScoped<UsuarioServico>();
         services.AddScoped<RegiaoServico>();
+        services.AddScoped<RelatoServico>();
+        services.AddScoped<GestorRelatoServico>();
+        services.AddScoped<RecalculoPrioridadeServico>();
+        services.AddScoped<IdempotenciaServico>();
         return services;
     }
 }

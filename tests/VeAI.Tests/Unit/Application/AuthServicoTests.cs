@@ -83,6 +83,13 @@ public class AuthServicoTests
             Salvamentos++;
             return Task.CompletedTask;
         }
+        public async Task<T> EmTransacaoAsync<T>(Func<Task<T>> acao, CancellationToken ct = default)
+        {
+            var r = await acao();
+            await SalvarAsync(ct);
+            return r;
+        }
+        public void AposConfirmar(Func<Task> acao) => acao();
     }
 
     private sealed class HasherFalso : ISenhaHasher
