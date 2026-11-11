@@ -1,0 +1,63 @@
+# =============================================================================
+# Vê AI · API .NET + Oracle XE + RabbitMQ (ambiente local completo)
+#
+#   docker compose up -d --build   # 1ª vez: baixa as imagens (~1,5 GB) e carrega o schema
+#   docker compose ps              # aguarde os serviços ficarem "healthy" (2 a 4 min na 1ª vez)
+#
+#   Swagger: http://localhost:8081/swagger      Saúde: http://localhost:8081/health
+#   Login de teste: ana.souza@veai.dev / Veai@2026 (gestora: marina.alves@ong-veai.dev)
+#
+# Só a infraestrutura (para rodar a API pela IDE com "dotnet run"):
+#   docker compose up -d oracle rabbitmq
+#
+# Parar: docker compose down   (os dados ficam no volume; "down -v" apaga e recarrega o seed)
+#
+# As senhas abaixo (veai/veai) são de containers descartáveis, só para rodar na sua máquina.
+# Nada aqui dá acesso ao Oracle da FIAP ou a qualquer serviço real: essas credenciais ficam
+# apenas no seu .env, que não vai para o git.
+# Portas ocupadas? Defina no .env: API_PORT, ORACLE_PORT, RABBITMQ_PORT, RABBITMQ_PAINEL_PORT.
+# =============================================================================
+name: ve-ai-dotnet
+
+services:
+  api:
+    build: .
+    image: ve-ai-api-dotnet:local
+    depends_on:
+      oracle:
+        condition: service_healthy
+    # Do .env vêm os segredos (JWT, chave da OpenAI) e os opcionais.
+    env_file:
+      - path: .env
+        required: false
+    # Estes valores têm prioridade sobre o .env: dentro do compose a API usa sempre os containers abaixo.
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Oracle: "User Id=veai;Password=veai;Data Source=oracle:1521/XEPDB1"
+    ports:
+      - "${API_PORT:-8081}:8080"
+    restart: on-failure
+
+  oracle:
+    # XE 21: versão gratuita mais próxima do Oracle 19c da FIAP. Só existe para linux/amd64
+    # (em Mac com Apple Silicon roda emulado, mais devagar).
+    image: gvenzl/oracle-xe:21-slim-faststart
+    environment:
+      ORACLE_PASSWORD: veai          # SYS/SYSTEM do container local
+      APP_USER: veai                 # schema da aplicação em XEPDB1
+      APP_USER_PASSWORD: veai
+    ports:
+      - "${ORACLE_PORT:-1521}:1521"
+    volumes:
+      - oracle-dados:/opt/oracle/oradata
+      - ./docker/oracle-init:/container-entrypoint-initdb.d:ro
+      - ./database/oracle:/veai-sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+
+volumes:
+  oracle-dados:

@@ -1,5 +1,11 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using VeAI.Api.Configuracao;
+using VeAI.Api.Saude;
+using VeAI.Infrastructure;
+
+// Carrega o .env (se existir) antes de montar a configuração. Segredos ficam só nele, nunca no git.
+DotEnv.Carregar();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,9 +23,11 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-// HealthChecks: "self" indica que o processo está vivo. Banco, RabbitMQ e OpenAI entram nas próximas etapas.
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// "self" indica que o processo está vivo. O banco (Oracle) é registrado pela Infrastructure.
 builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy("API no ar"), tags: ["live"]);
+    .AddCheck("api", () => HealthCheckResult.Healthy("API no ar"), tags: ["live"]);
 
 var app = builder.Build();
 
@@ -33,8 +41,16 @@ app.UseSwaggerUI(options =>
 
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") });
+// /health: tudo (API + banco + serviços externos) · /health/live: só o processo · /health/ready: dependências.
+app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = RespostaSaude.Escrever });
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("live"), ResponseWriter = RespostaSaude.Escrever
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready"), ResponseWriter = RespostaSaude.Escrever
+});
 
 app.Run();
 
