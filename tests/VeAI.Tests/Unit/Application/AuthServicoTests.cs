@@ -77,6 +77,8 @@ public class AuthServicoTests
             Task.FromResult(Todos.SingleOrDefault(u => u.Id == id));
         public Task<bool> EmailExisteAsync(string email, CancellationToken ct = default) =>
             Task.FromResult(Todos.Any(u => u.Email == email));
+        public Task<IReadOnlyList<long>> IdsDosGestoresDaRegiaoAsync(long regiaoId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<long>>([]);
         public void Adicionar(Usuario usuario) => Todos.Add(usuario);
         public Task SalvarAsync(CancellationToken ct = default)
         {

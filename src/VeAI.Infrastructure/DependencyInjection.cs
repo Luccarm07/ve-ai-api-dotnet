@@ -41,7 +41,25 @@ public static class DependencyInjection
         services.AddScoped<IDescricaoRepositorio, DescricaoRepositorio>();
         services.AddScoped<IIdempotenciaRepositorio, IdempotenciaRepositorio>();
         services.AddScoped<IUnidadeDeTrabalho, UnidadeDeTrabalho>();
-        services.AddSingleton<IPublicadorEventos, PublicadorEventosLog>();
+        services.AddScoped<INotificacaoRepositorio, NotificacaoRepositorio>();
+
+        // Mensageria: RabbitMQ (Rabbit__Url no .env) ou, sem ele, uma fila em memória com a mesma lógica.
+        services.Configure<RabbitOptions>(configuration.GetSection(RabbitOptions.Secao));
+        services.AddSingleton<ProcessadorEventos>();
+        var rabbit = configuration.GetSection(RabbitOptions.Secao).Get<RabbitOptions>() ?? new RabbitOptions();
+        if (rabbit.Ativo)
+        {
+            services.AddSingleton<ConexaoRabbit>();
+            services.AddSingleton<IPublicadorEventos, PublicadorEventosRabbit>();
+            services.AddHostedService<ConsumidorRabbit>();
+        }
+        else
+        {
+            services.AddSingleton<FilaEventosMemoria>();
+            services.AddSingleton<PublicadorEventosEmMemoria>();
+            services.AddSingleton<IPublicadorEventos>(sp => sp.GetRequiredService<PublicadorEventosEmMemoria>());
+            services.AddHostedService<ConsumidorEmMemoria>();
+        }
 
         // Recalcular prioridade e limpar idempotência vencida (desligável: Manutencao__Ativa=false).
         if (configuration.GetValue("Manutencao:Ativa", true))
@@ -71,6 +89,7 @@ public static class DependencyInjection
 
         services.AddHealthChecks()
             .AddCheck<IaHealthCheck>("ia", failureStatus: HealthStatus.Degraded, tags: ["ready", "externo"])
+            .AddCheck<MensageriaHealthCheck>("rabbitmq", failureStatus: HealthStatus.Degraded, tags: ["ready", "externo"])
             .AddDbContextCheck<VeAiDbContext>("oracle", tags: ["ready", "banco"],
                 customTestQuery: (db, ct) => db.Regioes.AnyAsync(ct));
 

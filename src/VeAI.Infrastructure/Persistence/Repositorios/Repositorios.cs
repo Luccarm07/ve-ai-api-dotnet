@@ -18,6 +18,10 @@ internal sealed class UsuarioRepositorio(VeAiDbContext db) : IUsuarioRepositorio
     public Task<bool> EmailExisteAsync(string emailNormalizado, CancellationToken ct = default) =>
         db.Usuarios.AnyAsync(u => u.Email == emailNormalizado, ct);
 
+    public async Task<IReadOnlyList<long>> IdsDosGestoresDaRegiaoAsync(long regiaoId, CancellationToken ct = default) =>
+        await db.Usuarios.Where(u => u.Papel == Papel.GESTOR && u.Regioes.Any(r => r.Id == regiaoId))
+            .OrderBy(u => u.Id).Select(u => u.Id).ToListAsync(ct);
+
     public void Adicionar(Usuario usuario) => db.Usuarios.Add(usuario);
 }
 
@@ -123,6 +127,9 @@ internal sealed class ApoioRepositorio(VeAiDbContext db) : IApoioRepositorio
     public Task<bool> ExisteAsync(long relatoId, long usuarioId, CancellationToken ct = default) =>
         db.Apoios.AnyAsync(a => a.RelatoId == relatoId && a.UsuarioId == usuarioId, ct);
 
+    public async Task<IReadOnlyList<long>> IdsDosApoiadoresAsync(long relatoId, CancellationToken ct = default) =>
+        await db.Apoios.Where(a => a.RelatoId == relatoId).OrderBy(a => a.Id).Select(a => a.UsuarioId).ToListAsync(ct);
+
     public void Adicionar(ApoioRelato apoio) => db.Apoios.Add(apoio);
 }
 
@@ -151,6 +158,24 @@ internal sealed class DescricaoRepositorio(VeAiDbContext db) : IDescricaoReposit
     public void Adicionar(Descricao descricao) => db.Descricoes.Add(descricao);
 
     public void Remover(Descricao descricao) => db.Descricoes.Remove(descricao);
+}
+
+internal sealed class NotificacaoRepositorio(VeAiDbContext db) : INotificacaoRepositorio
+{
+    public async Task<Pagina<Notificacao>> DoUsuarioAsync(long usuarioId, bool? lida, int pagina, int tamanho, CancellationToken ct = default)
+    {
+        var consulta = db.Notificacoes.AsNoTracking().Where(n => n.UsuarioId == usuarioId);
+        if (lida is { } l)
+            consulta = consulta.Where(n => n.Lida == l);
+        consulta = consulta.OrderByDescending(n => n.CriadoEm).ThenByDescending(n => n.Id);
+        var total = await consulta.LongCountAsync(ct);
+        return new Pagina<Notificacao>(await consulta.Skip(pagina * tamanho).Take(tamanho).ToListAsync(ct), total);
+    }
+
+    public Task<Notificacao?> BuscarDoUsuarioAsync(long id, long usuarioId, CancellationToken ct = default) =>
+        db.Notificacoes.SingleOrDefaultAsync(n => n.Id == id && n.UsuarioId == usuarioId, ct);
+
+    public void Adicionar(Notificacao notificacao) => db.Notificacoes.Add(notificacao);
 }
 
 internal sealed class IdempotenciaRepositorio(VeAiDbContext db) : IIdempotenciaRepositorio

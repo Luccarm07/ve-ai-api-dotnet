@@ -6,6 +6,7 @@
 #
 #   Swagger: http://localhost:8081/swagger      Saúde: http://localhost:8081/health
 #   Login de teste: ana.souza@veai.dev / Veai@2026 (gestora: marina.alves@ong-veai.dev)
+#   RabbitMQ: painel em http://localhost:15672 (veai / veai)
 #
 # Só a infraestrutura (para rodar a API pela IDE com "dotnet run"):
 #   docker compose up -d oracle rabbitmq
@@ -26,6 +27,8 @@ services:
     depends_on:
       oracle:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     # Do .env vêm os segredos (JWT, chave da OpenAI) e os opcionais.
     env_file:
       - path: .env
@@ -34,6 +37,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Oracle: "User Id=veai;Password=veai;Data Source=oracle:1521/XEPDB1"
+      Rabbit__Url: "amqp://veai:veai@rabbitmq:5672"
     ports:
       - "${API_PORT:-8081}:8080"
     restart: on-failure
@@ -59,5 +63,22 @@ services:
       retries: 40
       start_period: 60s
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: veai
+      RABBITMQ_DEFAULT_PASS: veai
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_PAINEL_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-dados:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   oracle-dados:
+  rabbitmq-dados:

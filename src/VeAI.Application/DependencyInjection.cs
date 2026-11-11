@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IdempotenciaServico>();
         services.AddScoped<DescricaoServico>();
         services.AddSingleton<MemoriaSugestoes>();
+        services.AddScoped<NotificacaoServico>();
         return services;
     }
 }

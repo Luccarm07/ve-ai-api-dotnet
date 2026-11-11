@@ -13,6 +13,7 @@ public interface IUsuarioRepositorio
     Task<Usuario?> BuscarPorEmailAsync(string emailNormalizado, CancellationToken ct = default);
     Task<Usuario?> BuscarComRegioesAsync(long id, CancellationToken ct = default);
     Task<bool> EmailExisteAsync(string emailNormalizado, CancellationToken ct = default);
+    Task<IReadOnlyList<long>> IdsDosGestoresDaRegiaoAsync(long regiaoId, CancellationToken ct = default);
     void Adicionar(Usuario usuario);
 }
 
@@ -54,6 +55,7 @@ public interface IRelatoRepositorio
 public interface IApoioRepositorio
 {
     Task<bool> ExisteAsync(long relatoId, long usuarioId, CancellationToken ct = default);
+    Task<IReadOnlyList<long>> IdsDosApoiadoresAsync(long relatoId, CancellationToken ct = default);
     void Adicionar(ApoioRelato apoio);
 }
 
@@ -92,6 +94,13 @@ public interface IIdempotenciaRepositorio
     void Adicionar(RegistroIdempotencia registro);
     void Remover(RegistroIdempotencia registro);
     Task<int> ApagarAnterioresAAsync(DateTime limite, CancellationToken ct = default);
+}
+
+public interface INotificacaoRepositorio
+{
+    Task<Pagina<Notificacao>> DoUsuarioAsync(long usuarioId, bool? lida, int pagina, int tamanho, CancellationToken ct = default);
+    Task<Notificacao?> BuscarDoUsuarioAsync(long id, long usuarioId, CancellationToken ct = default);
+    void Adicionar(Notificacao notificacao);
 }
 
 /// <summary>Publica eventos de relato (RabbitMQ). Chamado só depois do commit.</summary>

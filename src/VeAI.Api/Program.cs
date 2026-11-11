@@ -79,6 +79,7 @@ app.MapRegioes();
 app.MapRelatos();
 app.MapGestor();
 app.MapDescricoes();
+app.MapNotificacoes();
 
 // /health: API + banco + serviços externos · /health/live: só o processo · /health/ready: dependências.
 app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = RespostaSaude.Escrever }).AllowAnonymous().DisableRateLimiting();

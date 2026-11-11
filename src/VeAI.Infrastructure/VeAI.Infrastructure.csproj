@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.15" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
     <PackageReference Include="Oracle.EntityFrameworkCore" Version="10.23.26400" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
     <!-- Força a versão corrigida: o driver Oracle traz a 8.0.1, com vulnerabilidades conhecidas (NU1902/NU1903). -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
   </ItemGroup>

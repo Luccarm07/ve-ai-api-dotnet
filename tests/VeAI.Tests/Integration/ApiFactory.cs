@@ -64,8 +64,11 @@ public class ApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<VeAiDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<VeAiDbContext>>();
             services.AddDbContext<VeAiDbContext>(o => o.UseSqlite(_conexao));
+            // Eventos: guardados para os testes conferirem e processados na hora (sem fila em segundo plano),
+            // porque a conexão SQLite em memória não pode ser usada por duas threads ao mesmo tempo.
             services.RemoveAll<IPublicadorEventos>();
-            services.AddSingleton<IPublicadorEventos>(Eventos);
+            services.AddSingleton<IPublicadorEventos>(sp =>
+                Eventos.ProcessandoCom(sp.GetRequiredService<VeAI.Infrastructure.Mensageria.ProcessadorEventos>()));
 
             using var escopo = services.BuildServiceProvider().CreateScope();
             var db = escopo.ServiceProvider.GetRequiredService<VeAiDbContext>();
@@ -118,12 +121,20 @@ public static class DadosTeste
 public sealed class EventosCapturados : IPublicadorEventos
 {
     private readonly ConcurrentQueue<EventoRelato> _eventos = new();
+    private VeAI.Infrastructure.Mensageria.ProcessadorEventos? _processador;
 
     public IReadOnlyList<EventoRelato> Todos => _eventos.ToList();
 
-    public Task PublicarAsync(EventoRelato evento, CancellationToken ct = default)
+    public EventosCapturados ProcessandoCom(VeAI.Infrastructure.Mensageria.ProcessadorEventos processador)
+    {
+        _processador = processador;
+        return this;
+    }
+
+    public async Task PublicarAsync(EventoRelato evento, CancellationToken ct = default)
     {
         _eventos.Enqueue(evento);
-        return Task.CompletedTask;
+        if (_processador is not null)
+            await _processador.ProcessarAsync(evento, ct);
     }
 }
