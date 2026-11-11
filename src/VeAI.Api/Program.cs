@@ -20,6 +20,7 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
     .AddAutenticacaoJwt(builder.Configuration)
+    .AddLimitesRequisicao(builder.Configuration)
     .AddDocumentacaoOpenApi();
 
 // JSON: camelCase (padrão) e enums como texto ("CIDADAO", "ABERTO"...), igual à API Java.
@@ -66,6 +67,7 @@ app.UseSwaggerUI(options =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter(); // depois da autenticação: o limite é por usuário logado
 
 app.MapOpenApi().AllowAnonymous();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription().AllowAnonymous();
@@ -76,17 +78,18 @@ app.MapUsuarios();
 app.MapRegioes();
 app.MapRelatos();
 app.MapGestor();
+app.MapDescricoes();
 
 // /health: API + banco + serviços externos · /health/live: só o processo · /health/ready: dependências.
-app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = RespostaSaude.Escrever }).AllowAnonymous();
+app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = RespostaSaude.Escrever }).AllowAnonymous().DisableRateLimiting();
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("live"), ResponseWriter = RespostaSaude.Escrever
-}).AllowAnonymous();
+}).AllowAnonymous().DisableRateLimiting();
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = c => c.Tags.Contains("ready"), ResponseWriter = RespostaSaude.Escrever
-}).AllowAnonymous();
+}).AllowAnonymous().DisableRateLimiting();
 
 app.Run();
 

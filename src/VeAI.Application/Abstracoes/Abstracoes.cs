@@ -1,6 +1,7 @@
 using VeAI.Domain.Entities;
 using VeAI.Domain.Enums;
 using VeAI.Domain.Eventos;
+using VeAI.Domain.Modelos;
 
 namespace VeAI.Application.Abstracoes;
 
@@ -65,6 +66,24 @@ public interface IAtualizacaoRepositorio
 public interface IDescricaoRepositorio
 {
     Task<Descricao?> BuscarDoUsuarioAsync(long id, long usuarioId, CancellationToken ct = default);
+    Task<Pagina<Descricao>> DoUsuarioAsync(long usuarioId, int pagina, int tamanho, CancellationToken ct = default);
+    void Adicionar(Descricao descricao);
+    void Remover(Descricao descricao);
+}
+
+/// <summary>
+/// Porta para o modelo de visão. Implementações: OpenAI (de verdade) e um descritor falso
+/// (respostas fixas, sem custo), escolhidas pela configuração Ia__Provedor.
+/// </summary>
+public interface IDescritorImagem
+{
+    string Provedor { get; }
+
+    /// <summary>Descreve a foto. "anterior" vem só no modo automático; com ele, o modelo diz se há novidade.</summary>
+    Task<DescricaoIA> DescreverAsync(ImagemRecebida imagem, ModoDescricao modo, ContextoAnterior? anterior, CancellationToken ct = default);
+
+    /// <summary>Pergunta livre por voz sobre a foto. Nada é gravado.</summary>
+    Task<string> ResponderAsync(ImagemRecebida imagem, string pergunta, CancellationToken ct = default);
 }
 
 public interface IIdempotenciaRepositorio

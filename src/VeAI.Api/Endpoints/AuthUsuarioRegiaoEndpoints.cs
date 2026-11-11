@@ -10,7 +10,8 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder app)
     {
-        var grupo = app.MapGroup("/auth").WithTags("Autenticação").AllowAnonymous();
+        var grupo = app.MapGroup("/auth").WithTags("Autenticação").AllowAnonymous()
+            .RequireRateLimiting(Configuracao.LimitesRequisicao.PoliticaLogin); // contra força bruta: 10/min por IP
 
         grupo.MapPost("/registrar", async (RegistroRequest req, AuthServico servico, CancellationToken ct) =>
                 Results.Created("/usuarios/me", await servico.RegistrarAsync(req, ct)))

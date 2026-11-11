@@ -40,6 +40,9 @@ public class ApiFactory : WebApplicationFactory<Program>
         return cliente;
     }
 
+    protected virtual int FotosPorMinuto => 1000;
+    protected virtual int LoginPorMinuto => 10000;
+
     public ApiFactory()
     {
         _conexao.Open();
@@ -51,6 +54,10 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:Oracle", "nao-usado-nos-testes");
         builder.UseSetting("Jwt:Segredo", SegredoJwt);
         builder.UseSetting("Manutencao:Ativa", "false");
+        // Limites altos para a suíte (que faz muitos logins); os 429 são testados com LimitesBaixosFactory.
+        builder.UseSetting("RateLimit:FotosPorMinuto", FotosPorMinuto.ToString());
+        builder.UseSetting("RateLimit:LoginPorMinuto", LoginPorMinuto.ToString());
+        builder.UseSetting("RateLimit:RequisicoesPorMinuto", "100000");
 
         builder.ConfigureServices(services =>
         {

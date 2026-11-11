@@ -14,6 +14,8 @@ public sealed class TratadorErros(ILogger<TratadorErros> log) : IExceptionHandle
             RegraNegocioException e => (StatusDe(e.Tipo), e.Message),
             BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } =>
                 (413, "A foto passa de 5 MB. Envie uma foto menor."),
+            BadHttpRequestException { StatusCode: StatusCodes.Status415UnsupportedMediaType } =>
+                (415, "Envie a foto como multipart/form-data, no campo imagem."),
             BadHttpRequestException => (400, "Não entendi os dados enviados. Confira o formato e os valores."),
             DbUpdateException => (409, "Esta operação conflita com dados já existentes. Atualize e tente de novo."),
             OperationCanceledException => (499, "Requisição cancelada."),
@@ -36,6 +38,9 @@ public sealed class TratadorErros(ILogger<TratadorErros> log) : IExceptionHandle
         TipoErro.Proibido => StatusCodes.Status403Forbidden,
         TipoErro.NaoEncontrado => StatusCodes.Status404NotFound,
         TipoErro.Conflito => StatusCodes.Status409Conflict,
+        TipoErro.ArquivoGrande => StatusCodes.Status413PayloadTooLarge,
+        TipoErro.FormatoNaoSuportado => StatusCodes.Status415UnsupportedMediaType,
+        TipoErro.ServicoExterno => StatusCodes.Status502BadGateway,
         _ => StatusCodes.Status422UnprocessableEntity
     };
 }

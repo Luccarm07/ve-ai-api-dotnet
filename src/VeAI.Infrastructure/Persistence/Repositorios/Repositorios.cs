@@ -139,6 +139,18 @@ internal sealed class DescricaoRepositorio(VeAiDbContext db) : IDescricaoReposit
 {
     public Task<Descricao?> BuscarDoUsuarioAsync(long id, long usuarioId, CancellationToken ct = default) =>
         db.Descricoes.SingleOrDefaultAsync(d => d.Id == id && d.UsuarioId == usuarioId, ct);
+
+    public async Task<Pagina<Descricao>> DoUsuarioAsync(long usuarioId, int pagina, int tamanho, CancellationToken ct = default)
+    {
+        var consulta = db.Descricoes.AsNoTracking().Where(d => d.UsuarioId == usuarioId)
+            .OrderByDescending(d => d.CriadoEm).ThenByDescending(d => d.Id);
+        var total = await consulta.LongCountAsync(ct);
+        return new Pagina<Descricao>(await consulta.Skip(pagina * tamanho).Take(tamanho).ToListAsync(ct), total);
+    }
+
+    public void Adicionar(Descricao descricao) => db.Descricoes.Add(descricao);
+
+    public void Remover(Descricao descricao) => db.Descricoes.Remove(descricao);
 }
 
 internal sealed class IdempotenciaRepositorio(VeAiDbContext db) : IIdempotenciaRepositorio

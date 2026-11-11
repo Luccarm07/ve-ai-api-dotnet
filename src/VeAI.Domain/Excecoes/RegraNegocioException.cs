@@ -14,7 +14,13 @@ public enum TipoErro
     /// <summary>Requisição malformada (400).</summary>
     RequisicaoInvalida,
     /// <summary>Credenciais inválidas ou ausentes (401).</summary>
-    NaoAutenticado
+    NaoAutenticado,
+    /// <summary>Arquivo grande demais (413).</summary>
+    ArquivoGrande,
+    /// <summary>Formato de arquivo não suportado (415).</summary>
+    FormatoNaoSuportado,
+    /// <summary>Serviço externo (IA) falhou ou não respondeu (502).</summary>
+    ServicoExterno
 }
 
 /// <summary>Erro de negócio com mensagem curta, pronta para ser lida em voz alta pelo app.</summary>

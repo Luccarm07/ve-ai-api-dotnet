@@ -14,6 +14,8 @@ public static class DependencyInjection
         services.AddScoped<GestorRelatoServico>();
         services.AddScoped<RecalculoPrioridadeServico>();
         services.AddScoped<IdempotenciaServico>();
+        services.AddScoped<DescricaoServico>();
+        services.AddSingleton<MemoriaSugestoes>();
         return services;
     }
 }
