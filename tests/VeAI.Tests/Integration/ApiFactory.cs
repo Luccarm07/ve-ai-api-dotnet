@@ -1,3 +1,6 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -16,7 +19,20 @@ namespace VeAI.Tests.Integration;
 /// </summary>
 public class ApiFactory : WebApplicationFactory<Program>
 {
+    public const string SegredoJwt = "segredo-so-dos-testes-automatizados-com-mais-de-32-caracteres";
+
     private readonly SqliteConnection _conexao = new("DataSource=:memory:");
+
+    /// <summary>Cliente já autenticado com o usuário informado (senha do seed: Veai@2026).</summary>
+    public async Task<HttpClient> ClienteLogadoAsync(string email)
+    {
+        var cliente = CreateClient();
+        var resposta = await cliente.PostAsJsonAsync("/auth/login", new { email, senha = DadosTeste.Senha });
+        resposta.EnsureSuccessStatusCode();
+        var token = (await resposta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+        cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return cliente;
+    }
 
     public ApiFactory()
     {
@@ -27,6 +43,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Oracle", "nao-usado-nos-testes");
+        builder.UseSetting("Jwt:Segredo", SegredoJwt);
 
         builder.ConfigureServices(services =>
         {

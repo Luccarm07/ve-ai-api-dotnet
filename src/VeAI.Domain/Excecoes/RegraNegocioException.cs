@@ -12,7 +12,9 @@ public enum TipoErro
     /// <summary>Usuário autenticado sem permissão sobre o recurso (403).</summary>
     Proibido,
     /// <summary>Requisição malformada (400).</summary>
-    RequisicaoInvalida
+    RequisicaoInvalida,
+    /// <summary>Credenciais inválidas ou ausentes (401).</summary>
+    NaoAutenticado
 }
 
 /// <summary>Erro de negócio com mensagem curta, pronta para ser lida em voz alta pelo app.</summary>

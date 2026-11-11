@@ -37,7 +37,7 @@ public class Usuario
     public void AtualizarPreferencias(double velocidadeVoz, bool perguntaLivreAtiva)
     {
         if (velocidadeVoz is < VelocidadeVozMinima or > VelocidadeVozMaxima)
-            throw Excecoes.RegraNegocioException.Invalida("A velocidade da voz deve ficar entre 0,5 e 2.");
+            throw Excecoes.RegraNegocioException.Invalida("A velocidade da voz vai de 0,5 a 2,0.");
         VelocidadeVoz = Math.Round(velocidadeVoz, 2);
         PerguntaLivreAtiva = perguntaLivreAtiva;
     }
