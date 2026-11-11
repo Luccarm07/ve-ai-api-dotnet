@@ -26,7 +26,7 @@ Esta é a API que o app mobile consome. Ela tem **o mesmo contrato** da [API Jav
 
 1. [Rodar em 3 comandos](#1-rodar-em-3-comandos)
 2. [Como o Vê AI funciona](#2-como-o-vê-ai-funciona)
-3. [Roteiro de avaliação, critério por critério](#3-roteiro-de-avaliação-critério-por-critério)
+3. [Requisitos da GS: o que foi feito e como testar](#3-requisitos-da-gs-o-que-foi-feito-e-como-testar)
 4. [Testes automatizados](#4-testes-automatizados)
 5. [Endpoints e regras de negócio](#5-endpoints-e-regras-de-negócio)
 6. [Arquitetura](#6-arquitetura)
@@ -98,22 +98,22 @@ sequenceDiagram
 
 ---
 
-## 3. Roteiro de avaliação, critério por critério
+## 3. Requisitos da GS: o que foi feito e como testar
 
-| # | Critério da GS | Pts | Em uma frase |
-|---|---|:-:|---|
-| 01 | [Minimal API, validações, HTTP e Swagger](#critério-01) | 20 | 18 rotas em Minimal APIs, erros padronizados em português, Swagger completo |
-| 02 | [JWT: autenticação e autorização](#critério-02) | 20 | perfis CIDADAO e GESTOR; o gestor só enxerga as regiões que atende |
-| 03 | [Idempotência](#critério-03) | 15 | `Idempotency-Key`: o mesmo envio nunca cria dois relatos, nem em paralelo |
-| 04 | [Rate limiting com 429](#critério-04) | 15 | middleware nativo do ASP.NET Core, com `Retry-After` |
-| 05 | [Testes xUnit](#critério-05) | 20 | 133 testes: 80 unitários e 53 de integração |
-| 06 | [Health checks](#critério-06) | 10 | API, Oracle, RabbitMQ e IA, com Healthy / Degraded / Unhealthy |
+| # | Requisito da GS | O que foi implementado |
+|---|---|---|
+| 01 | [Minimal API, validações, HTTP e Swagger](#critério-01) | 18 rotas em Minimal APIs, erros padronizados em português, Swagger completo |
+| 02 | [JWT: autenticação e autorização](#critério-02) | perfis CIDADAO e GESTOR; o gestor só enxerga as regiões que atende |
+| 03 | [Idempotência](#critério-03) | `Idempotency-Key`: o mesmo envio nunca cria dois relatos, nem em paralelo |
+| 04 | [Rate limiting com 429](#critério-04) | middleware nativo do ASP.NET Core, com `Retry-After` |
+| 05 | [Testes xUnit](#critério-05) | 133 testes: 80 unitários e 53 de integração |
+| 06 | [Health checks](#critério-06) | API, Oracle, RabbitMQ e IA, com Healthy / Degraded / Unhealthy |
 
-> 💡 **Atalho para o roteiro inteiro:** abra [`docs/roteiro-avaliacao.http`](docs/roteiro-avaliacao.http) no **Visual Studio** (ou VS Code com a extensão REST Client) e clique em **Enviar solicitação** em cada bloco, na ordem. Os tokens e o id do relato passam de um passo para o outro sozinhos, e o resultado esperado está escrito em cada bloco. Os passos abaixo são os mesmos, feitos pelo Swagger.
+> 💡 **Atalho para testar tudo:** abra [`docs/roteiro-de-testes.http`](docs/roteiro-de-testes.http) no **Visual Studio** (ou VS Code com a extensão REST Client) e clique em **Enviar solicitação** em cada bloco, na ordem. Os tokens e o id do relato passam de um passo para o outro sozinhos, e o resultado esperado está escrito em cada bloco. Os passos abaixo são os mesmos, feitos pelo Swagger.
 
 <a id="critério-01"></a>
 <details>
-<summary><b>01 · Minimal API RESTful, validações, códigos HTTP e Swagger</b> (20 pts)</summary>
+<summary><b>01 · Minimal API RESTful, validações, códigos HTTP e Swagger</b></summary>
 
 **Para que serve no Vê AI:** o app lê as respostas em voz alta. Por isso todo erro tem o mesmo formato e uma frase curta em português, que o app pode falar direto.
 
@@ -139,7 +139,7 @@ sequenceDiagram
 
 <a id="critério-02"></a>
 <details>
-<summary><b>02 · Autenticação e autorização com JWT</b> (20 pts)</summary>
+<summary><b>02 · Autenticação e autorização com JWT</b></summary>
 
 **Para que serve no Vê AI:** o cidadão só vê os próprios relatos e descrições; o gestor de uma ONG só vê e altera os relatos **dos bairros que atende**.
 
@@ -162,7 +162,7 @@ sequenceDiagram
 
 <a id="critério-03"></a>
 <details>
-<summary><b>03 · Idempotência</b> (15 pts)</summary>
+<summary><b>03 · Idempotência</b></summary>
 
 **Para que serve no Vê AI:** quem não enxerga pode tocar duas vezes no botão, e na rua a internet cai e o app reenvia. Sem idempotência, cada reenvio criaria outro relato duplicado na fila do gestor.
 
@@ -190,7 +190,7 @@ sequenceDiagram
 
 <a id="critério-04"></a>
 <details>
-<summary><b>04 · Rate limiting com HTTP 429</b> (15 pts)</summary>
+<summary><b>04 · Rate limiting com HTTP 429</b></summary>
 
 **Para que serve no Vê AI:** no modo automático o celular manda uma foto a cada poucos segundos, e cada foto é uma chamada paga à IA. O limite protege o custo e a API. No login, ele protege as contas contra força bruta.
 
@@ -213,7 +213,7 @@ Acima do limite: **429**, header **`Retry-After`** e a mensagem "Muitas fotos em
 
 <a id="critério-05"></a>
 <details>
-<summary><b>05 · Testes unitários e de integração com xUnit</b> (20 pts)</summary>
+<summary><b>05 · Testes unitários e de integração com xUnit</b></summary>
 
 **Para que serve no Vê AI:** as regras (prioridade, 30 m, estados, idempotência) são o que garante que a pessoa certa é avisada e que nada se duplica. Os testes provam isso a cada mudança.
 
@@ -232,7 +232,7 @@ Esperado: **Aprovados: 131, Ignorados: 2**. No Visual Studio: **Teste → Gerenc
 
 <a id="critério-06"></a>
 <details>
-<summary><b>06 · Health checks: API, banco e serviços externos</b> (10 pts)</summary>
+<summary><b>06 · Health checks: API, banco e serviços externos</b></summary>
 
 **Para que serve no Vê AI:** quem opera a API sabe na hora se o problema é o banco, a fila de notificações ou a IA, sem abrir logs.
 
@@ -416,7 +416,7 @@ docker compose up -d oracle rabbitmq      # só o banco e a fila
 dotnet run --project src/VeAI.Api         # Swagger em http://localhost:5046/swagger
 ```
 
-No Visual Studio: abra `VeAI.sln`, escolha o perfil **http** (ao lado do ▶) e aperte **F5**. Sem `.env`, em desenvolvimento a API usa o Oracle do Docker (`appsettings.Development.json`) e a fila em memória. No roteiro `.http`, troque a porta para `5046`.
+No Visual Studio: abra `VeAI.sln`, escolha o perfil **http** (ao lado do ▶) e aperte **F5**. Sem `.env`, em desenvolvimento a API usa o Oracle do Docker (`appsettings.Development.json`) e a fila em memória. No `docs/roteiro-de-testes.http`, troque a porta para `5046`.
 </details>
 
 <details>

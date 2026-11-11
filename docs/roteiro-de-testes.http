@@ -1,5 +1,5 @@
 # =============================================================================
-# Vê AI · API .NET · Roteiro de avaliação (Visual Studio, VS Code com REST Client ou Rider)
+# Vê AI · API .NET · Roteiro de testes (Visual Studio, VS Code com REST Client ou Rider)
 #
 # 1. Suba a API:  docker compose up -d --build   (aguarde de 3 a 5 min na 1ª vez)
 # 2. Abra este arquivo e clique em "Enviar solicitação" / "Send Request" em cada bloco, NA ORDEM.
@@ -83,7 +83,7 @@ Content-Type: application/json
 POST {{api}}/relatos
 Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
-Idempotency-Key: roteiro-avaliacao-1
+Idempotency-Key: roteiro-testes-1
 
 {"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905, "endereco": "Rua dos Pinheiros, 500"}
 
@@ -92,7 +92,7 @@ Idempotency-Key: roteiro-avaliacao-1
 POST {{api}}/relatos
 Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
-Idempotency-Key: roteiro-avaliacao-1
+Idempotency-Key: roteiro-testes-1
 
 {"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905, "endereco": "Rua dos Pinheiros, 500"}
 
@@ -100,7 +100,7 @@ Idempotency-Key: roteiro-avaliacao-1
 POST {{api}}/relatos
 Authorization: Bearer {{loginAna.response.body.$.token}}
 Content-Type: application/json
-Idempotency-Key: roteiro-avaliacao-1
+Idempotency-Key: roteiro-testes-1
 
 {"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Outro texto", "latitude": -23.5650, "longitude": -46.6905}
 
