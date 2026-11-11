@@ -20,15 +20,16 @@ public static class AuthEndpoints
             .WithDescription("Gestores não se cadastram: vêm do seed. O e-mail é único.")
             .ComValidacao<RegistroRequest>()
             .Produces<UsuarioResposta>(StatusCodes.Status201Created)
-            .ProducesErro(StatusCodes.Status409Conflict);
+            .ProducesErro(StatusCodes.Status409Conflict, StatusCodes.Status429TooManyRequests);
 
         grupo.MapPost("/login", async (LoginRequest req, AuthServico servico, CancellationToken ct) =>
                 Results.Ok(await servico.LoginAsync(req, ct)))
             .WithName("Login")
             .WithSummary("Entra com e-mail e senha e recebe o JWT (válido por 8 h)")
+            .WithDescription("Limite de 10 tentativas por minuto por IP (contra força bruta): acima disso, 429 com Retry-After.")
             .ComValidacao<LoginRequest>()
             .Produces<TokenResposta>()
-            .ProducesErro(StatusCodes.Status401Unauthorized);
+            .ProducesErro(StatusCodes.Status401Unauthorized, StatusCodes.Status429TooManyRequests);
 
         return app;
     }
