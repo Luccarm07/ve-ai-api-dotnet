@@ -1,0 +1,15 @@
+# Quebras de linha: o Git normaliza para LF no repositório.
+* text=auto
+
+# Scripts executados dentro dos containers Linux precisam de LF, mesmo quando o
+# repositório é clonado no Windows (core.autocrlf=true converteria para CRLF e o
+# bash do Oracle falharia ao carregar o schema).
+*.sh  text eol=lf
+*.sql text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+
+# Arquivos binários
+*.png binary
+*.jpg binary
+*.zip binary
