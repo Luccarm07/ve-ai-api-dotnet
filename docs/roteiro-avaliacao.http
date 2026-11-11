@@ -1,0 +1,194 @@
+# =============================================================================
+# Vê AI · API .NET · Roteiro de avaliação (Visual Studio, VS Code com REST Client ou Rider)
+#
+# 1. Suba a API:  docker compose up -d --build   (aguarde de 3 a 5 min na 1ª vez)
+# 2. Abra este arquivo e clique em "Enviar solicitação" / "Send Request" em cada bloco, NA ORDEM.
+#    Os tokens e o id do relato passam de um bloco para o outro sozinhos.
+# 3. O resultado esperado está no comentário de cada bloco.
+#
+# Rodando a API com "dotnet run" em vez do Docker? Troque a porta abaixo para 5046.
+# =============================================================================
+
+@api = http://localhost:8081
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 0. HEALTH CHECKS · esperado: 200, "Healthy" em api, oracle, rabbitmq e ia
+# ─────────────────────────────────────────────────────────────────────────────
+GET {{api}}/health
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. JWT: LOGIN DOS 4 USUÁRIOS DE TESTE (senha de todos: Veai@2026)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 1a. Login da cidadã Ana · esperado: 200 com token, "papel": "CIDADAO"
+# @name loginAna
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"email": "ana.souza@veai.dev", "senha": "Veai@2026"}
+
+### 1b. Login do cidadão Bruno · esperado: 200
+# @name loginBruno
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"email": "bruno.lima@veai.dev", "senha": "Veai@2026"}
+
+### 1c. Login da gestora Marina (regiões Pinheiros e Sé) · esperado: 200, "papel": "GESTOR"
+# @name loginMarina
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"email": "marina.alves@ong-veai.dev", "senha": "Veai@2026"}
+
+### 1d. Login do gestor Rafael (só Vila Mariana) · esperado: 200
+# @name loginRafael
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"email": "rafael.costa@cras-veai.dev", "senha": "Veai@2026"}
+
+### 1e. Sem token · esperado: 401 "Faça login para continuar."
+GET {{api}}/usuarios/me
+
+### 1f. Com token · esperado: 200 com os dados da Ana
+GET {{api}}/usuarios/me
+Authorization: Bearer {{loginAna.response.body.$.token}}
+
+### 1g. Cidadã na rota do gestor · esperado: 403 "Você não tem permissão para esta ação."
+GET {{api}}/gestor/relatos
+Authorization: Bearer {{loginAna.response.body.$.token}}
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. VALIDAÇÕES E CÓDIGOS HTTP
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 2a. Corpo inválido · esperado: 400 "Confira os dados enviados." com a lista de campos
+POST {{api}}/relatos
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+
+{"texto": "", "latitude": 100}
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. IDEMPOTÊNCIA E REGRA DOS 30 m
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 3a. Ana cria um relato · esperado: 201, "resultado": "CRIADO", região "Pinheiros" (escolhida pelo GPS)
+# @name criarRelato
+POST {{api}}/relatos
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+Idempotency-Key: roteiro-avaliacao-1
+
+{"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905, "endereco": "Rua dos Pinheiros, 500"}
+
+### 3b. MESMO envio de novo (toque duplo / internet ruim) · esperado: MESMA resposta, MESMO id,
+#       header "Idempotent-Replayed: true" e nenhum relato novo
+POST {{api}}/relatos
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+Idempotency-Key: roteiro-avaliacao-1
+
+{"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905, "endereco": "Rua dos Pinheiros, 500"}
+
+### 3c. Mesma chave com OUTRO conteúdo · esperado: 422 "Esta Idempotency-Key já foi usada com outro conteúdo."
+POST {{api}}/relatos
+Authorization: Bearer {{loginAna.response.body.$.token}}
+Content-Type: application/json
+Idempotency-Key: roteiro-avaliacao-1
+
+{"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Outro texto", "latitude": -23.5650, "longitude": -46.6905}
+
+### 3d. Bruno relata a MESMA barreira (a menos de 30 m) · esperado: 200 "APOIO_REGISTRADO",
+#       mesmo id do relato da Ana, "totalApoios": 1 e prioridade de 5 para 10
+POST {{api}}/relatos
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+Content-Type: application/json
+
+{"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905}
+
+### 3e. Bruno de novo · esperado: 200 "JA_REGISTRADO" (o apoio não conta duas vezes)
+POST {{api}}/relatos
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+Content-Type: application/json
+
+{"tipo": "CALCADA_DANIFICADA", "gravidade": "ALTA", "texto": "Buraco grande na calçada", "latitude": -23.5650, "longitude": -46.6905}
+
+### 3f. Ana tenta excluir o relato que já tem apoio · esperado: 409 "Outras pessoas já confirmaram este relato..."
+DELETE {{api}}/relatos/{{criarRelato.response.body.$.relato.id}}
+Authorization: Bearer {{loginAna.response.body.$.token}}
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. GESTOR: FILA, MÁQUINA DE ESTADOS E HISTÓRICO
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 4a. Fila da Marina (só Pinheiros e Sé, maior prioridade primeiro) · esperado: 200
+GET {{api}}/gestor/relatos?status=ABERTO
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+
+### 4b. ABERTO → EM_TRIAGEM · esperado: 200
+PATCH {{api}}/gestor/relatos/{{criarRelato.response.body.$.relato.id}}/status
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+Content-Type: application/json
+
+{"status": "EM_TRIAGEM", "comentario": "Vistoria marcada"}
+
+### 4c. Pular etapa (EM_TRIAGEM → RESOLVIDO) · esperado: 422 "Não é possível mudar o relato de EM_TRIAGEM para RESOLVIDO."
+PATCH {{api}}/gestor/relatos/{{criarRelato.response.body.$.relato.id}}/status
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+Content-Type: application/json
+
+{"status": "RESOLVIDO"}
+
+### 4d. Encaminhar exige protocolo · esperado: 200 com "protocoloOrgao"
+PATCH {{api}}/gestor/relatos/{{criarRelato.response.body.$.relato.id}}/status
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+Content-Type: application/json
+
+{"status": "ENCAMINHADO", "protocoloOrgao": "SP156-2026-0012345"}
+
+### 4e. Histórico · esperado: 200 com as 2 mudanças feitas pela Marina Alves
+GET {{api}}/gestor/relatos/{{criarRelato.response.body.$.relato.id}}/historico
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+
+### 4f. Gestor de OUTRA região · esperado: 403 "Este relato é de uma região que você não atende."
+GET {{api}}/gestor/relatos/{{criarRelato.response.body.$.relato.id}}
+Authorization: Bearer {{loginRafael.response.body.$.token}}
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. NOTIFICAÇÕES (geradas pelo consumidor do RabbitMQ)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 5a. Marina · esperado: "Novo relato de calçada danificada em Pinheiros."
+GET {{api}}/notificacoes?lida=false
+Authorization: Bearer {{loginMarina.response.body.$.token}}
+
+### 5b. Ana · esperado: o apoio do Bruno, "em análise" e "encaminhado ... Protocolo SP156-2026-0012345."
+GET {{api}}/notificacoes
+Authorization: Bearer {{loginAna.response.body.$.token}}
+
+### 5c. Bruno · esperado: "O relato de calçada danificada que você apoiou ..."
+GET {{api}}/notificacoes
+Authorization: Bearer {{loginBruno.response.body.$.token}}
+
+###
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. RATE LIMITING (429)
+# Envie o bloco abaixo 11 vezes seguidas (menos de 1 minuto):
+# da 1ª à 10ª → 401; a 11ª → 429 "Muitas tentativas em pouco tempo. Aguarde N segundos..."
+# com o header Retry-After. Depois, espere 1 minuto antes de fazer login de novo.
+# (O limite de fotos, 20/min por usuário, é testado em POST /descricoes pelo Swagger.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 6a. Login com senha errada (repita 11 vezes)
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{"email": "ana.souza@veai.dev", "senha": "senha-errada"}
