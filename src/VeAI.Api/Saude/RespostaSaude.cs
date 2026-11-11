@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -6,7 +7,12 @@ namespace VeAI.Api.Saude;
 /// <summary>Escreve o resultado dos HealthChecks em JSON: status geral e situação de cada dependência.</summary>
 public static class RespostaSaude
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        // Acentos legíveis ao abrir o /health no navegador ("inacessível", e não "inacess\u00EDvel").
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     public static Task Escrever(HttpContext context, HealthReport relatorio)
     {
