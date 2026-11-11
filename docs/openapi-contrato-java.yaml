@@ -1,0 +1,1139 @@
+openapi: 3.1.0
+info:
+  title: Vê AI · API
+  description: "Assistente para pessoas com deficiência visual: descreve o ambiente\
+    \ com IA e transforma barreiras de acessibilidade em relatos para a rede de apoio.\
+    \ Mesmo contrato nas versões Java e .NET."
+  contact:
+    name: Vê AI · FIAP 2TDSPX
+  version: 1.0.0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+security:
+- bearer: []
+tags:
+- name: Gestor
+  description: "Fila da rede de apoio: só as regiões atendidas pelo gestor"
+- name: Regiões
+  description: Bairros atendidos pela rede de apoio
+- name: Notificações
+  description: Avisos gerados pelo consumidor RabbitMQ e lidos em voz alta pelo app
+- name: Relatos
+  description: Barreiras de acessibilidade relatadas pelo cidadão
+- name: Descrições
+  description: "Descrição do ambiente por IA e histórico (só texto: a foto nunca é\
+    \ guardada)"
+- name: Usuário
+  description: Perfil e preferências de voz do usuário logado
+paths:
+  /usuarios/me/preferencias:
+    put:
+      tags:
+      - Usuário
+      summary: Atualiza velocidade da voz e pergunta livre
+      operationId: preferencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreferenciasRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UsuarioResposta"
+  /relatos/{id}:
+    get:
+      tags:
+      - Relatos
+      summary: Detalhe do relato (para o autor e para quem apoiou)
+      operationId: buscar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatoResposta"
+    put:
+      tags:
+      - Relatos
+      summary: "Edita tipo, gravidade, texto e endereço (só enquanto ABERTO; a localizaç\
+        ão não muda)"
+      operationId: editar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelatoEdicaoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatoResposta"
+    delete:
+      tags:
+      - Relatos
+      summary: Exclui o relato (só enquanto ABERTO e sem apoios de outras pessoas)
+      operationId: excluir
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "409":
+          description: Outras pessoas já confirmaram o relato
+        "204":
+          description: No Content
+  /relatos:
+    post:
+      tags:
+      - Relatos
+      summary: Registra um relato ou +1 apoio (regra dos 30 m)
+      description: "Se já existe um relato aberto do mesmo tipo a até 30 m, registra\
+        \ um apoio nele. Envie Idempotency-Key para que um toque duplo ou uma conexã\
+        o ruim não dupliquem o envio."
+      operationId: registrar
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: "Chave única por envio (ex.: UUID gerado pelo app)"
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RelatoRequest"
+        required: true
+      responses:
+        "201":
+          description: Relato criado (resultado = CRIADO)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RegistroRelatoResposta"
+        "200":
+          description: APOIO_REGISTRADO ou JA_REGISTRADO
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RegistroRelatoResposta"
+  /descricoes:
+    get:
+      tags:
+      - Descrições
+      summary: "Histórico de descrições, da mais recente para a mais antiga"
+      operationId: listar
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaginaRespostaDescricaoResposta"
+    post:
+      tags:
+      - Descrições
+      summary: Descreve a foto (perigos primeiro) e sugere relato se houver barreira
+      description: "Modo manual: envie só a foto. Modo automático (fotos a cada poucos\
+        \ segundos enquanto a pessoa anda): envie também anteriorId, o id da resposta\
+        \ anterior. A IA compara as cenas: com novidade, a descricaoCompleta traz\
+        \ só o que mudou; sem novidade, é uma confirmação curta. O app fala as duas.\
+        \ A mesma sugestão de relato não se repete por 2 minutos. Uma descrição anterior\
+        \ com mais de 2 minutos é ignorada (a cena é descrita inteira de novo)."
+      operationId: descrever
+      parameters:
+      - name: modo
+        in: query
+        required: false
+        schema:
+          type: string
+          default: AMBIENTE
+          enum:
+          - AMBIENTE
+          - TEXTO
+      - name: anteriorId
+        in: query
+        description: "Modo automático: id da resposta anterior (a da foto anterior\
+          \ da caminhada)"
+        required: false
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagem:
+                  type: string
+                  format: binary
+              required:
+              - imagem
+      responses:
+        "201":
+          description: Descrição criada
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+        "404":
+          description: anteriorId não existe ou é de outra pessoa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+        "413":
+          description: Foto acima de 5 MB
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+        "415":
+          description: "Formato diferente de JPEG, PNG ou WebP"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+        "429":
+          description: Limite de fotos por minuto (header Retry-After)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+  /descricoes/{id}/pergunta:
+    post:
+      tags:
+      - Descrições
+      summary: Pergunta livre por voz sobre a foto (o app reenvia a imagem; nada é
+        gravado)
+      description: Exige perguntaLivreAtiva = true nas preferências. Conta no mesmo
+        limite por minuto.
+      operationId: perguntar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: pergunta
+        in: query
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                imagem:
+                  type: string
+                  format: binary
+              required:
+              - imagem
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PerguntaResposta"
+  /auth/registrar:
+    post:
+      tags:
+      - Autenticação
+      summary: Cria uma conta de cidadão
+      description: "Gestores não se cadastram: vêm do seed."
+      operationId: registrar_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UsuarioResposta"
+      security: []
+  /auth/login:
+    post:
+      tags:
+      - Autenticação
+      summary: Entra com e-mail e senha e recebe o JWT (válido por 8 h)
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResposta"
+      security: []
+  /notificacoes/{id}/lida:
+    patch:
+      tags:
+      - Notificações
+      summary: Marca a notificação como lida
+      operationId: marcarComoLida
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/NotificacaoResposta"
+  /gestor/relatos/{id}/status:
+    patch:
+      tags:
+      - Gestor
+      summary: "Muda o status: ABERTO → EM_TRIAGEM → ENCAMINHADO (protocolo) → RESOLVIDO,\
+        \ ou DESCARTADO (motivo)"
+      operationId: atualizarStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusRequest"
+        required: true
+      responses:
+        "403":
+          description: Relato de uma região que o gestor não atende
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatoResposta"
+        "422":
+          description: "Transição inválida, protocolo ou motivo ausente"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatoResposta"
+  /descricoes/{id}/avaliacao:
+    patch:
+      tags:
+      - Descrições
+      summary: Marca a descrição como útil ou não útil
+      operationId: avaliar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvaliacaoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+  /usuarios/me:
+    get:
+      tags:
+      - Usuário
+      summary: Dados do usuário logado (gestor inclui as regiões atendidas)
+      operationId: me
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UsuarioResposta"
+  /relatos/meus:
+    get:
+      tags:
+      - Relatos
+      summary: "Relatos criados por mim, do mais recente para o mais antigo"
+      operationId: meus
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaginaRespostaRelatoResposta"
+  /regioes:
+    get:
+      tags:
+      - Regiões
+      summary: Lista as regiões atendidas
+      operationId: listar_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegiaoResposta"
+  /notificacoes:
+    get:
+      tags:
+      - Notificações
+      summary: "Minhas notificações, da mais recente para a mais antiga"
+      operationId: listar_2
+      parameters:
+      - name: lida
+        in: query
+        description: false = só as não lidas
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaginaRespostaNotificacaoResposta"
+  /gestor/relatos:
+    get:
+      tags:
+      - Gestor
+      summary: "Fila de relatos das minhas regiões, por prioridade"
+      operationId: fila
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ABERTO
+          - EM_TRIAGEM
+          - ENCAMINHADO
+          - RESOLVIDO
+          - DESCARTADO
+      - name: regiaoId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "403":
+          description: regiaoId de uma região que o gestor não atende
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaginaRespostaRelatoResposta"
+  /gestor/relatos/{id}:
+    get:
+      tags:
+      - Gestor
+      summary: Detalhe de um relato da minha região
+      operationId: buscar_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RelatoResposta"
+  /gestor/relatos/{id}/historico:
+    get:
+      tags:
+      - Gestor
+      summary: Histórico de mudanças de status do relato
+      operationId: historico
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AtualizacaoResposta"
+  /descricoes/{id}:
+    get:
+      tags:
+      - Descrições
+      summary: Detalhe de uma descrição
+      operationId: buscar_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DescricaoResposta"
+    delete:
+      tags:
+      - Descrições
+      summary: Exclui a descrição do histórico
+      operationId: excluir_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+components:
+  schemas:
+    PreferenciasRequest:
+      type: object
+      properties:
+        velocidadeVoz:
+          type: number
+          format: double
+          example: 1.25
+          maximum: 2.0
+          minimum: 0.5
+        perguntaLivreAtiva:
+          type: boolean
+      required:
+      - perguntaLivreAtiva
+      - velocidadeVoz
+    RegiaoResposta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        cidade:
+          type: string
+        uf:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+    UsuarioResposta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        email:
+          type: string
+        papel:
+          type: string
+          enum:
+          - CIDADAO
+          - GESTOR
+        velocidadeVoz:
+          type: number
+          format: double
+        perguntaLivreAtiva:
+          type: boolean
+        criadoEm:
+          type: string
+          format: date-time
+        regioes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegiaoResposta"
+    RelatoEdicaoRequest:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum:
+          - CALCADA_DANIFICADA
+          - OBSTRUCAO_PERMANENTE
+          - PISO_TATIL
+          - RAMPA
+          - SEMAFORO_SEM_SOM
+          - OBRA_SEM_SINALIZACAO
+          - OUTRO
+        gravidade:
+          type: string
+          enum:
+          - BAIXA
+          - MEDIA
+          - ALTA
+        texto:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        endereco:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - gravidade
+      - texto
+      - tipo
+    RegiaoResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+    RelatoResposta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        cidadaoId:
+          type: integer
+          format: int64
+        descricaoId:
+          type: integer
+          format: int64
+        regiao:
+          $ref: "#/components/schemas/RegiaoResumo"
+        tipo:
+          type: string
+          enum:
+          - CALCADA_DANIFICADA
+          - OBSTRUCAO_PERMANENTE
+          - PISO_TATIL
+          - RAMPA
+          - SEMAFORO_SEM_SOM
+          - OBRA_SEM_SINALIZACAO
+          - OUTRO
+        gravidade:
+          type: string
+          enum:
+          - BAIXA
+          - MEDIA
+          - ALTA
+        texto:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        endereco:
+          type: string
+        status:
+          type: string
+          enum:
+          - ABERTO
+          - EM_TRIAGEM
+          - ENCAMINHADO
+          - RESOLVIDO
+          - DESCARTADO
+        protocoloOrgao:
+          type: string
+        motivoDescarte:
+          type: string
+        totalApoios:
+          type: integer
+          format: int32
+        prioridade:
+          type: integer
+          format: int32
+        normaReferencia:
+          type: string
+        criadoEm:
+          type: string
+          format: date-time
+        atualizadoEm:
+          type: string
+          format: date-time
+    RelatoRequest:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum:
+          - CALCADA_DANIFICADA
+          - OBSTRUCAO_PERMANENTE
+          - PISO_TATIL
+          - RAMPA
+          - SEMAFORO_SEM_SOM
+          - OBRA_SEM_SINALIZACAO
+          - OUTRO
+        gravidade:
+          type: string
+          enum:
+          - BAIXA
+          - MEDIA
+          - ALTA
+        texto:
+          type: string
+          example: "Buraco grande na calçada, em frente ao número 500."
+          maxLength: 1000
+          minLength: 0
+        latitude:
+          type: number
+          format: double
+          example: -23.56612
+          maximum: 90.0
+          minimum: -90.0
+        longitude:
+          type: number
+          format: double
+          example: -46.68431
+          maximum: 180.0
+          minimum: -180.0
+        endereco:
+          type: string
+          example: "Rua dos Pinheiros, 500"
+          maxLength: 200
+          minLength: 0
+        descricaoId:
+          type: integer
+          format: int64
+          description: Descrição da IA que originou o relato (opcional)
+        regiaoId:
+          type: integer
+          format: int64
+          description: "Opcional: se ausente, a API usa a região de centro mais pró\
+            ximo"
+      required:
+      - gravidade
+      - latitude
+      - longitude
+      - texto
+      - tipo
+    RegistroRelatoResposta:
+      type: object
+      description: 201 quando cria o relato; 200 quando já existe um igual a até 30
+        m
+      properties:
+        resultado:
+          type: string
+          enum:
+          - CRIADO
+          - APOIO_REGISTRADO
+          - JA_REGISTRADO
+        apoioRegistrado:
+          type: boolean
+        relato:
+          $ref: "#/components/schemas/RelatoResposta"
+    DescricaoResposta:
+      type: object
+      description: "Descrição gerada pela IA. O app fala a descricaoCompleta, que\
+        \ já começa pelos perigos (com posição e distância). No modo automático, sem\
+        \ novidade ela é uma confirmação curta (\"O poste e o carro continuam no mesmo\
+        \ lugar, à sua frente.\"). perigos, resumo e objetos são dados estruturados\
+        \ para alertas, histórico e listas."
+      properties:
+        id:
+          type: integer
+          format: int64
+        modo:
+          type: string
+          enum:
+          - AMBIENTE
+          - TEXTO
+        perigos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Perigo"
+        resumo:
+          type: string
+        descricaoCompleta:
+          type: string
+        novidade:
+          type: boolean
+          description: "Só na resposta do POST. Sem anteriorId é sempre true. Com\
+            \ anteriorId: true = algo mudou (a descricaoCompleta traz só a mudanç\
+            a); false = mesma cena (a descricaoCompleta é uma confirmação curta).\
+            \ O app fala a descricaoCompleta nos dois casos e pode usar novidade para,\
+            \ por exemplo, tocar um aviso sonoro antes. null no histórico (não é gravado)."
+        objetos:
+          type: array
+          items:
+            type: string
+        barreiraDetectada:
+          type: boolean
+        barreiraTipo:
+          type: string
+          enum:
+          - CALCADA_DANIFICADA
+          - OBSTRUCAO_PERMANENTE
+          - PISO_TATIL
+          - RAMPA
+          - SEMAFORO_SEM_SOM
+          - OBRA_SEM_SINALIZACAO
+          - OUTRO
+        latenciaMs:
+          type: integer
+          format: int32
+        util:
+          type: boolean
+        criadoEm:
+          type: string
+          format: date-time
+        sugestaoRelato:
+          $ref: "#/components/schemas/SugestaoRelato"
+          description: "Presente só quando a IA viu uma barreira estrutural com confianç\
+            a alta. No modo automático (com anteriorId), a mesma sugestão não se repete\
+            \ por 2 minutos"
+    Perigo:
+      type: object
+      properties:
+        descricao:
+          type: string
+        direcao:
+          type: string
+        distanciaAprox:
+          type: string
+    SugestaoRelato:
+      type: object
+      description: Pergunta que o app faz ao cidadão antes de criar o relato
+      properties:
+        tipo:
+          type: string
+          enum:
+          - CALCADA_DANIFICADA
+          - OBSTRUCAO_PERMANENTE
+          - PISO_TATIL
+          - RAMPA
+          - SEMAFORO_SEM_SOM
+          - OBRA_SEM_SINALIZACAO
+          - OUTRO
+        gravidade:
+          type: string
+          enum:
+          - BAIXA
+          - MEDIA
+          - ALTA
+        pergunta:
+          type: string
+    PerguntaResposta:
+      type: object
+      properties:
+        resposta:
+          type: string
+    RegistroRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 120
+          minLength: 0
+        email:
+          type: string
+          format: email
+          maxLength: 160
+          minLength: 0
+        senha:
+          type: string
+          example: Veai@2026
+          maxLength: 72
+          minLength: 8
+      required:
+      - email
+      - nome
+      - senha
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: ana.souza@veai.dev
+          minLength: 1
+        senha:
+          type: string
+          example: Veai@2026
+          minLength: 1
+      required:
+      - email
+      - senha
+    TokenResposta:
+      type: object
+      properties:
+        token:
+          type: string
+        tipo:
+          type: string
+        expiraEm:
+          type: string
+          format: date-time
+        papel:
+          type: string
+          enum:
+          - CIDADAO
+          - GESTOR
+        usuario:
+          $ref: "#/components/schemas/UsuarioResposta"
+    NotificacaoResposta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        relatoId:
+          type: integer
+          format: int64
+        mensagem:
+          type: string
+        lida:
+          type: boolean
+        criadoEm:
+          type: string
+          format: date-time
+    StatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ABERTO
+          - EM_TRIAGEM
+          - ENCAMINHADO
+          - RESOLVIDO
+          - DESCARTADO
+        protocoloOrgao:
+          type: string
+          description: Obrigatório para ENCAMINHADO
+          example: SP156-2026-0012345
+          maxLength: 40
+          minLength: 0
+        comentario:
+          type: string
+          maxLength: 500
+          minLength: 0
+        motivoDescarte:
+          type: string
+          description: Obrigatório para DESCARTADO
+          maxLength: 300
+          minLength: 0
+      required:
+      - status
+    AvaliacaoRequest:
+      type: object
+      properties:
+        util:
+          type: boolean
+      required:
+      - util
+    PaginaRespostaRelatoResposta:
+      type: object
+      properties:
+        conteudo:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelatoResposta"
+        pagina:
+          type: integer
+          format: int32
+        tamanho:
+          type: integer
+          format: int32
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    PaginaRespostaNotificacaoResposta:
+      type: object
+      properties:
+        conteudo:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificacaoResposta"
+        pagina:
+          type: integer
+          format: int32
+        tamanho:
+          type: integer
+          format: int32
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    AtualizacaoResposta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        statusAnterior:
+          type: string
+          enum:
+          - ABERTO
+          - EM_TRIAGEM
+          - ENCAMINHADO
+          - RESOLVIDO
+          - DESCARTADO
+        statusNovo:
+          type: string
+          enum:
+          - ABERTO
+          - EM_TRIAGEM
+          - ENCAMINHADO
+          - RESOLVIDO
+          - DESCARTADO
+        comentario:
+          type: string
+        gestorId:
+          type: integer
+          format: int64
+        gestorNome:
+          type: string
+        criadoEm:
+          type: string
+          format: date-time
+    PaginaRespostaDescricaoResposta:
+      type: object
+      properties:
+        conteudo:
+          type: array
+          items:
+            $ref: "#/components/schemas/DescricaoResposta"
+        pagina:
+          type: integer
+          format: int32
+        tamanho:
+          type: integer
+          format: int32
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

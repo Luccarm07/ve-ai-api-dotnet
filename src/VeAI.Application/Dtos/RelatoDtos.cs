@@ -92,7 +92,8 @@ public enum ResultadoRegistro
 /// <summary>201 quando cria o relato; 200 quando já existe um igual a até 30 m (apoio ou já registrado).</summary>
 public sealed record RegistroRelatoResposta(ResultadoRegistro Resultado, bool ApoioRegistrado, RelatoResposta Relato)
 {
-    public int StatusHttp => Resultado == ResultadoRegistro.CRIADO ? 201 : 200;
+    /// <summary>201 para CRIADO, 200 para os demais (método, e não propriedade, para não aparecer no JSON).</summary>
+    public int StatusHttp() => Resultado == ResultadoRegistro.CRIADO ? 201 : 200;
 }
 
 public sealed record AtualizacaoResposta(long Id, StatusRelato StatusAnterior, StatusRelato StatusNovo, string? Comentario,

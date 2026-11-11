@@ -27,7 +27,7 @@ public static class RelatoEndpoints
                 var resposta = await idempotencia.ExecutarAsync(usuarioId, idempotencyKey, req, async () =>
                 {
                     var corpo = await relatos.RegistrarAsync(usuarioId, req, ct);
-                    return (corpo.StatusHttp, corpo);
+                    return (corpo.StatusHttp(), corpo);
                 }, ct);
 
                 if (resposta.Repetida)
