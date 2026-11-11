@@ -1,0 +1,10 @@
+Global Solution 2026/2 · FIAP · 2TDSPX
+Advanced Business Development with .NET
+Projeto: Vê AI (CitizenTech: acessibilidade para pessoas com deficiência visual)
+
+Lucas Grillo Alcântara            RM 561413
+Pietro Ferreira Gomes Abrahamian  RM 561469
+Pedro Peres Benitez               RM 561792
+Lucca Ramos Mussumecci            RM 562027
+
+Repositório: https://github.com/Luccarm07/ve-ai-api-dotnet
