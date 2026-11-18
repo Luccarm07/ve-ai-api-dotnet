@@ -31,6 +31,7 @@ Esta é a API que o app mobile consome. Ela tem **o mesmo contrato** da [API Jav
 5. [Endpoints e regras de negócio](#5-endpoints-e-regras-de-negócio)
 6. [Arquitetura](#6-arquitetura)
 7. [Configuração, outras formas de rodar e problemas comuns](#7-configuração-outras-formas-de-rodar-e-problemas-comuns)
+8. [Evidências de Uso de IA)
 
 ---
 
@@ -452,3 +453,12 @@ Todas estão em [.env.example](.env.example). Copie para `.env` (que não vai pa
 | Mac com Apple Silicon lento | a imagem do Oracle XE é amd64 e roda emulada: a primeira subida demora mais |
 | Quero começar com o banco zerado | `docker compose down -v` e `docker compose up -d` |
 </details>
+
+## 8. Uso de inteligência artificial
+
+Este projeto foi desenvolvido com o apoio do Claude (Anthropic) como assistente de programação.
+
+- **Do grupo:** a ideia do Vê AI, as regras de negócio (regra dos 30 m, prioridade, máquina de estados, perfis de acesso), o modelo e os scripts do banco Oracle e o contrato da API, definidos nas demais disciplinas da GS.
+- **Uso da IA:** a partir dessas definições e sob a orientação do grupo, a IA gerou a implementação em .NET (código, testes e documentação), uma etapa por vez.
+- **Em cada etapa, o grupo:** decidiu as escolhas técnicas (banco, mensageria, provedor de IA), executou e testou cada requisito na própria máquina e conferiu o resultado contra o enunciado da GS.
+- O grupo estudou o código entregue e responde por ele.
