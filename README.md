@@ -31,7 +31,7 @@ Esta é a API que o app mobile consome. Ela tem **o mesmo contrato** da [API Jav
 5. [Endpoints e regras de negócio](#5-endpoints-e-regras-de-negócio)
 6. [Arquitetura](#6-arquitetura)
 7. [Configuração, outras formas de rodar e problemas comuns](#7-configuração-outras-formas-de-rodar-e-problemas-comuns)
-8. [Evidências de Uso de IA]
+8. [Evidências de Uso de IA](#8-evidências-de-uso-de-ia)
 
 ---
 
@@ -454,7 +454,9 @@ Todas estão em [.env.example](.env.example). Copie para `.env` (que não vai pa
 | Quero começar com o banco zerado | `docker compose down -v` e `docker compose up -d` |
 </details>
 
-## 8. Uso de inteligência artificial
+---
+
+## 8. Evidências de Uso de IA
 
 Este projeto foi desenvolvido com o apoio do Claude (Anthropic) como assistente de programação.
 
