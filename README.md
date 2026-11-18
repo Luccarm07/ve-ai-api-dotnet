@@ -9,7 +9,7 @@
 
 **Global Solution 2026/2 · FIAP 2TDSPX · Advanced Business Development with .NET · tema CitizenTech**
 
-> **O Vê AI é um assistente para pessoas com deficiência visual.** O celular fotografa o caminho e a IA narra por áudio o que está à frente, **com os perigos primeiro**. Quando aparece uma barreira de acessibilidade (buraco, calçada obstruída, rampa irregular, piso tátil faltando, semáforo sem som), a pessoa avisa a rede de apoio com um toque. O **relato** chega com GPS ao **gestor da região** (ONG/CRAS), que o encaminha ao órgão público, e quem relatou é avisado a cada passo.
+> O Vê AI é um assistente em português para pessoas com deficiência visual. Enquanto a pessoa anda, o celular fotografa o caminho a cada poucos segundos e a IA narra por áudio o que muda, com os perigos primeiro, e confirma em uma frase curta quando nada mudou (modo automático). A pessoa também pode pedir uma descrição na hora ou a leitura de um texto, como placa ou embalagem (modo manual). Quando a IA identifica uma barreira estrutural (buraco, calçada obstruída, rampa irregular, falta de piso tátil, semáforo sem som), o app pergunta se a pessoa quer avisar a rede de apoio. O relato chega com GPS ao gestor da região (ONG/CRAS), que faz a triagem e o encaminha ao órgão público até a resolução.
 
 Esta é a API que o app mobile consome. Ela tem **o mesmo contrato** da [API Java](https://github.com/lgaxd/ve-ai-api-java) e usa **o mesmo banco Oracle** do repositório [database](https://github.com/lgaxd/ve-ai-database): o app funciona com qualquer uma das duas.
 
