@@ -31,7 +31,7 @@ Esta é a API que o app mobile consome. Ela tem **o mesmo contrato** da [API Jav
 5. [Endpoints e regras de negócio](#5-endpoints-e-regras-de-negócio)
 6. [Arquitetura](#6-arquitetura)
 7. [Configuração, outras formas de rodar e problemas comuns](#7-configuração-outras-formas-de-rodar-e-problemas-comuns)
-8. [Evidências de Uso de IA)
+8. [Evidências de Uso de IA]
 
 ---
 
